@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "date -u +%Y-%m-%dT%H:%M:%SZ > /tmp/claude_session_start.txt"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'START=$(cat /tmp/claude_session_start.txt 2>/dev/null); if [[ -n \"$START\" ]]; then export SESSION_START_TIME=\"$START\"; bash \"$(git rev-parse --show-toplevel)/usage/log_session.sh\"; rm -f /tmp/claude_session_start.txt; fi'",
+            "timeout": 30,
+            "statusMessage": "Logging session usage..."
+          }
+        ]
+      }
+    ]
+  }
+}
