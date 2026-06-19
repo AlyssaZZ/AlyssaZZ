@@ -1,18 +1,14 @@
-// Claude Code Pixel Widget — Scriptable (iOS)
 const GITHUB_RAW_URL =
   "https://raw.githubusercontent.com/alyssazz/alyssazz/main/usage/sessions.json"
 
-// Pixel palette
-const BG       = new Color("#0a0a0a")
-const GREEN1   = new Color("#00ff41")  // Matrix green
-const GREEN2   = new Color("#00c832")
-const GREEN3   = new Color("#006418")
-const YELLOW   = new Color("#ffe600")
-const ORANGE   = new Color("#ff8c00")
-const RED      = new Color("#ff2222")
-const DIM      = new Color("#3a3a3a")
-const WHITE    = new Color("#e8e8e8")
-const GRAY     = new Color("#666666")
+const BG     = new Color("#0f0f1a")
+const GREEN  = new Color("#39ff14")
+const YELLOW = new Color("#ffe600")
+const ORANGE = new Color("#ff8c00")
+const RED    = new Color("#ff3333")
+const WHITE  = new Color("#f0f0f0")
+const DIM    = new Color("#444466")
+const DIMBAR = new Color("#1e1e2e")
 
 async function fetchData() {
   const req = new Request(GITHUB_RAW_URL)
@@ -21,39 +17,32 @@ async function fetchData() {
 }
 
 function fmtMins(m) {
-  if (m < 60) return `${m}MIN`
+  if (m < 60) return `${m}m`
   const h = Math.floor(m / 60), r = m % 60
-  return r === 0 ? `${h}H` : `${h}H${r}M`
-}
-
-function pixelBar(filled, total, char_fill, char_empty) {
-  return char_fill.repeat(filled) + char_empty.repeat(total - filled)
+  return r === 0 ? `${h}h` : `${h}h${r}m`
 }
 
 function barColor(pct) {
-  if (pct >= 0.8) return GREEN1
+  if (pct >= 0.8) return GREEN
   if (pct >= 0.5) return YELLOW
   if (pct >= 0.3) return ORANGE
   return RED
 }
 
-// Pixel characters for the little sprite
-const SPRITES = [
-  "  ▄███▄  ",
-  " █(O O)█ ",
-  "  █▀█▀█  ",
-  "  ▌   ▐  ",
-]
+function pixelBar(pct, total) {
+  const filled = Math.max(1, Math.round(pct * total))
+  return "█".repeat(filled) + "░".repeat(total - filled)
+}
 
 async function buildWidget(data) {
   const w = new ListWidget()
   w.backgroundColor = BG
-  w.setPadding(12, 14, 12, 14)
+  w.setPadding(14, 16, 14, 16)
 
   if (!data) {
-    const t = w.addText("ERR: NO DATA")
+    const t = w.addText("NO DATA")
     t.textColor = RED
-    t.font = new Font("Courier New", 12)
+    t.font = new Font("Menlo", 14)
     return w
   }
 
@@ -61,97 +50,92 @@ async function buildWidget(data) {
   const goal = s.monthly_goal_minutes || 600
   const weekGoal = Math.round(goal / 4)
   const todayGoal = Math.round(goal / 30)
-
   const weekPct  = Math.min(s.week_minutes / weekGoal, 1)
   const todayPct = Math.min(s.today_minutes / todayGoal, 1)
+  const refreshStr = new Date().toLocaleTimeString("zh-CN", {hour:"2-digit", minute:"2-digit"})
 
-  const now = new Date()
-  const refreshStr = now.toLocaleTimeString("zh-CN", {hour:"2-digit", minute:"2-digit"})
+  // ── ROW 1: icon + title + refresh time ──
+  const r1 = w.addStack()
+  r1.layoutHorizontally()
+  r1.centerAlignContent()
 
-  // ── TOP: pixel character + TODAY ──
-  const topRow = w.addStack()
-  topRow.layoutHorizontally()
-  topRow.centerAlignContent()
+  const ico = r1.addText("👾")
+  ico.font = Font.systemFont(20)
 
-  // Sprite column
-  const spriteCol = topRow.addStack()
-  spriteCol.layoutVertically()
-  spriteCol.centerAlignContent()
-  for (const line of SPRITES) {
-    const t = spriteCol.addText(line)
-    t.font = new Font("Courier New", 9)
-    t.textColor = GREEN1
-  }
+  r1.addSpacer(8)
 
-  topRow.addSpacer(10)
+  const titleTxt = r1.addText("CLAUDE.EXE")
+  titleTxt.font = new Font("Menlo", 13)
+  titleTxt.textColor = GREEN
 
-  // Today stats column
-  const todayCol = topRow.addStack()
-  todayCol.layoutVertically()
+  r1.addSpacer()
 
-  const todayLabel = todayCol.addText("▶ TODAY")
-  todayLabel.font = new Font("Courier New", 9)
-  todayLabel.textColor = GRAY
+  const refreshTxt = r1.addText("⟳ " + refreshStr)
+  refreshTxt.font = new Font("Menlo", 11)
+  refreshTxt.textColor = DIM
 
-  todayCol.addSpacer(2)
+  w.addSpacer(10)
 
-  const todayVal = todayCol.addText(fmtMins(s.today_minutes))
-  todayVal.font = new Font("Courier New", 22)
+  // ── ROW 2: TODAY label + big number ──
+  const r2 = w.addStack()
+  r2.layoutHorizontally()
+  r2.bottomAlignContent()
+
+  const todayLbl = r2.addText("TODAY  ")
+  todayLbl.font = new Font("Menlo", 11)
+  todayLbl.textColor = DIM
+
+  const todayVal = r2.addText(fmtMins(s.today_minutes))
+  todayVal.font = new Font("Menlo", 28)
   todayVal.textColor = barColor(todayPct)
 
-  todayCol.addSpacer(3)
+  r2.addSpacer()
 
-  // Today pixel bar (10 chars)
-  const todayFilled = Math.round(todayPct * 10)
-  const todayBarTxt = todayCol.addText("[" + pixelBar(todayFilled, 10, "█", "░") + "]")
-  todayBarTxt.font = new Font("Courier New", 10)
+  const todayGoalTxt = r2.addText("/ " + fmtMins(todayGoal))
+  todayGoalTxt.font = new Font("Menlo", 11)
+  todayGoalTxt.textColor = DIM
+
+  w.addSpacer(5)
+
+  // ── ROW 3: TODAY bar ──
+  const todayBarTxt = w.addText(pixelBar(todayPct, 28))
+  todayBarTxt.font = new Font("Menlo", 11)
   todayBarTxt.textColor = barColor(todayPct)
-
-  todayCol.addSpacer(3)
-
-  const refreshTxt = todayCol.addText("⟳ " + refreshStr)
-  refreshTxt.font = new Font("Courier New", 9)
-  refreshTxt.textColor = GRAY
-
-  topRow.addSpacer()
 
   w.addSpacer(10)
 
   // ── DIVIDER ──
-  const divider = w.addText("╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌")
-  divider.font = new Font("Courier New", 8)
-  divider.textColor = GREEN3
+  const div = w.addText("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+  div.font = new Font("Menlo", 7)
+  div.textColor = DIM
 
   w.addSpacer(8)
 
-  // ── BOTTOM: WEEK PROGRESS ──
-  const weekLabel = w.addText("▶ THIS WEEK")
-  weekLabel.font = new Font("Courier New", 9)
-  weekLabel.textColor = GRAY
+  // ── ROW 4: WEEK label + numbers ──
+  const r4 = w.addStack()
+  r4.layoutHorizontally()
+  r4.centerAlignContent()
+
+  const weekLbl = r4.addText("WEEK  ")
+  weekLbl.font = new Font("Menlo", 11)
+  weekLbl.textColor = DIM
+
+  const weekVal = r4.addText(fmtMins(s.week_minutes))
+  weekVal.font = new Font("Menlo", 16)
+  weekVal.textColor = barColor(weekPct)
+
+  r4.addSpacer()
+
+  const weekGoalTxt = r4.addText(Math.round(weekPct * 100) + "%  / " + fmtMins(weekGoal))
+  weekGoalTxt.font = new Font("Menlo", 11)
+  weekGoalTxt.textColor = DIM
 
   w.addSpacer(4)
 
-  // Big week bar (20 chars)
-  const weekFilled = Math.round(weekPct * 20)
-  const weekBar = w.addText("[" + pixelBar(weekFilled, 20, "█", "░") + "]")
-  weekBar.font = new Font("Courier New", 12)
-  weekBar.textColor = barColor(weekPct)
-
-  w.addSpacer(4)
-
-  // Week numbers row
-  const weekNumRow = w.addStack()
-  weekNumRow.layoutHorizontally()
-
-  const weekTime = weekNumRow.addText(fmtMins(s.week_minutes) + " / " + fmtMins(weekGoal))
-  weekTime.font = new Font("Courier New", 11)
-  weekTime.textColor = WHITE
-
-  weekNumRow.addSpacer()
-
-  const weekPctTxt = weekNumRow.addText(Math.round(weekPct * 100) + "%")
-  weekPctTxt.font = new Font("Courier New", 11)
-  weekPctTxt.textColor = barColor(weekPct)
+  // ── ROW 5: WEEK bar ──
+  const weekBarTxt = w.addText(pixelBar(weekPct, 28))
+  weekBarTxt.font = new Font("Menlo", 11)
+  weekBarTxt.textColor = barColor(weekPct)
 
   w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
   return w
