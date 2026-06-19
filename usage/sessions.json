@@ -1,0 +1,36 @@
+{
+  "sessions": [
+    {
+      "start": "2026-06-19T07:56:53Z",
+      "end": "2026-06-19T07:56:53Z",
+      "minutes": 1
+    },
+    {
+      "start": "2026-06-19T07:58:32Z",
+      "end": "2026-06-19T07:58:32Z",
+      "minutes": 1
+    },
+    {
+      "start": "2026-06-19T08:02:39Z",
+      "end": "2026-06-19T08:02:39Z",
+      "minutes": 1
+    },
+    {
+      "start": "2026-06-19T08:03:27Z",
+      "end": "2026-06-19T08:03:27Z",
+      "minutes": 1
+    }
+  ],
+  "stats": {
+    "total_sessions": 4,
+    "total_minutes": 4,
+    "today_sessions": 4,
+    "today_minutes": 4,
+    "week_sessions": 4,
+    "week_minutes": 4,
+    "month_sessions": 4,
+    "month_minutes": 4,
+    "monthly_goal_minutes": 600,
+    "last_updated": "2026-06-19T08:03:27Z"
+  }
+}
