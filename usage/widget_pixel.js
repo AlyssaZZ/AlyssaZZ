@@ -1,13 +1,13 @@
 const GITHUB_RAW_URL =
   "https://raw.githubusercontent.com/alyssazz/alyssazz/main/usage/sessions.json"
 
-const ACCENT  = new Color("#7C3AED")
-const BG_DARK = new Color("#0D0D0D")
-const BG_CARD = new Color("#1A1A2E")
-const DIM     = new Color("#888888")
-const MID     = new Color("#CCCCCC")
-const HI      = Color.white()
-const GREEN   = new Color("#22C55E")
+const BG    = new Color("#0a0a0a")
+const AMBER = new Color("#ffb347")
+const GOLD  = new Color("#ffe066")
+const DIM   = new Color("#555555")
+const WHITE = new Color("#f5f5f5")
+const GREEN = new Color("#7fff7f")
+const PINK  = new Color("#ff6eb4")
 
 async function fetchData() {
   const req = new Request(GITHUB_RAW_URL)
@@ -18,120 +18,164 @@ async function fetchData() {
 function fmtMins(m) {
   if (m < 60) return `${m}m`
   const h = Math.floor(m / 60), r = m % 60
-  return r === 0 ? `${h}h` : `${h}h ${r}m`
+  return r === 0 ? `${h}h` : `${h}h${r}m`
+}
+
+// 心心进度（今日）: 最多10颗心
+function hearts(pct, total) {
+  const filled = Math.max(0, Math.round(pct * total))
+  return "♥".repeat(filled) + "♡".repeat(total - filled)
+}
+
+// 方块进度（本周）: 最多10格
+function blocks(pct, total) {
+  const filled = Math.max(0, Math.round(pct * total))
+  return "■".repeat(filled) + "□".repeat(total - filled)
+}
+
+// 等级：每10小时升一级
+function level(totalMins) {
+  return Math.floor(totalMins / 600)
 }
 
 async function buildWidget(data) {
   const w = new ListWidget()
-  w.backgroundColor = BG_DARK
-  w.setPadding(14, 16, 14, 16)
+  w.backgroundColor = BG
+  w.setPadding(12, 16, 12, 16)
 
   if (!data) {
-    const t = w.addText("⚠️ No data")
-    t.textColor = HI
-    t.font = Font.systemFont(12)
+    const t = w.addText("NO SIGNAL")
+    t.textColor = AMBER
+    t.font = new Font("Courier New", 12)
     return w
   }
 
   const s = data.stats
   const goal = s.monthly_goal_minutes || 600
-  const monthPct = Math.min(s.month_minutes / goal, 1)
+  const todayGoal = Math.round(goal / 30)   // ~20m/day
+  const weekGoal  = Math.round(goal / 4)    // ~150m/week
+  const todayPct  = Math.min(s.today_minutes / todayGoal, 1)
+  const weekPct   = Math.min(s.week_minutes  / weekGoal,  1)
+  const lv        = level(s.total_minutes)
   const refreshStr = new Date().toLocaleTimeString("zh-CN", {hour:"2-digit", minute:"2-digit"})
 
-  // ── Row 1: 像素小人 + 标题 + 刷新时间 ──
+  // ── 像素小人 + 名字 + 刷新时间 ──
   const r1 = w.addStack()
   r1.layoutHorizontally()
   r1.centerAlignContent()
 
-  const sprite = r1.addText("👾")
-  sprite.font = Font.systemFont(18)
+  // 像素小人列
+  const spriteCol = r1.addStack()
+  spriteCol.layoutVertically()
+  spriteCol.centerAlignContent()
 
-  r1.addSpacer(6)
+  const lines = [" {-□-} ", "(  oo )", " ╰──╯  "]
+  for (const l of lines) {
+    const t = spriteCol.addText(l)
+    t.font = new Font("Courier New", 10)
+    t.textColor = AMBER
+  }
 
-  const titleTxt = r1.addText("Claude Code")
-  titleTxt.font = Font.boldSystemFont(14)
-  titleTxt.textColor = HI
+  r1.addSpacer(10)
+
+  // 名字 + lv
+  const nameCol = r1.addStack()
+  nameCol.layoutVertically()
+
+  const nameRow = nameCol.addStack()
+  nameRow.layoutHorizontally()
+  nameRow.centerAlignContent()
+  const nameTxt = nameRow.addText("Claude")
+  nameTxt.font = new Font("Courier New", 13)
+  nameTxt.textColor = WHITE
+  nameRow.addSpacer(6)
+  const lvBadge = nameRow.addStack()
+  lvBadge.backgroundColor = new Color("#ff6b35")
+  lvBadge.cornerRadius = 4
+  lvBadge.setPadding(1, 5, 1, 5)
+  const lvTxt = lvBadge.addText(`Lv ${lv}`)
+  lvTxt.font = new Font("Courier New", 9)
+  lvTxt.textColor = WHITE
+
+  nameCol.addSpacer(4)
+
+  const refTxt = nameCol.addText("⟳ " + refreshStr)
+  refTxt.font = new Font("Courier New", 9)
+  refTxt.textColor = DIM
 
   r1.addSpacer()
 
-  const refreshTxt = r1.addText("⟳ " + refreshStr)
-  refreshTxt.font = Font.systemFont(11)
-  refreshTxt.textColor = DIM
-
   w.addSpacer(10)
 
-  // ── Row 2: THIS MONTH 标签 + 进度数字 ──
-  const mLabel = w.addText("THIS MONTH")
-  mLabel.textColor = DIM
-  mLabel.font = Font.mediumSystemFont(9)
+  // ── 今日进度（心心）──
+  const todayRow = w.addStack()
+  todayRow.layoutHorizontally()
+  todayRow.centerAlignContent()
 
-  w.addSpacer(3)
+  const todayLbl = todayRow.addText("today  ")
+  todayLbl.font = new Font("Courier New", 11)
+  todayLbl.textColor = DIM
 
-  const mRow = w.addStack()
-  mRow.layoutHorizontally()
-  mRow.bottomAlignContent()
+  const heartsTxt = todayRow.addText(hearts(todayPct, 10))
+  heartsTxt.font = new Font("Courier New", 11)
+  heartsTxt.textColor = PINK
 
-  const mVal = mRow.addText(fmtMins(s.month_minutes))
-  mVal.textColor = HI
-  mVal.font = Font.boldSystemFont(22)
+  todayRow.addSpacer()
 
-  mRow.addSpacer(4)
-
-  const mGoal = mRow.addText(`/ ${fmtMins(goal)}`)
-  mGoal.textColor = DIM
-  mGoal.font = Font.systemFont(12)
-
-  mRow.addSpacer()
-
-  const badge = mRow.addStack()
-  badge.backgroundColor = monthPct >= 1 ? GREEN : ACCENT
-  badge.cornerRadius = 6
-  badge.setPadding(2, 7, 2, 7)
-  const badgeTxt = badge.addText(monthPct >= 1 ? "✓" : `${Math.round(monthPct * 100)}%`)
-  badgeTxt.textColor = HI
-  badgeTxt.font = Font.boldSystemFont(10)
+  const todayVal = todayRow.addText(fmtMins(s.today_minutes))
+  todayVal.font = new Font("Courier New", 11)
+  todayVal.textColor = GOLD
 
   w.addSpacer(6)
 
-  // ── 进度条（永远是紫色）──
-  const barBg = w.addStack()
-  barBg.backgroundColor = new Color("#2A2A3E")
-  barBg.cornerRadius = 4
-  const barFill = barBg.addStack()
-  barFill.backgroundColor = monthPct >= 1 ? GREEN : ACCENT
-  barFill.cornerRadius = 4
-  barFill.size = new Size(Math.max(8, Math.round(270 * monthPct)), 8)
-  barBg.addSpacer()
+  // ── 本周进度（方块）──
+  const weekRow = w.addStack()
+  weekRow.layoutHorizontally()
+  weekRow.centerAlignContent()
 
-  w.addSpacer(10)
+  const weekLbl = weekRow.addText("week   ")
+  weekLbl.font = new Font("Courier New", 11)
+  weekLbl.textColor = DIM
 
-  // ── Row 3: TODAY / WEEK / TOTAL 卡片 ──
-  const row = w.addStack()
-  row.layoutHorizontally()
+  const blocksTxt = weekRow.addText(blocks(weekPct, 10))
+  blocksTxt.font = new Font("Courier New", 11)
+  blocksTxt.textColor = GREEN
 
-  function addCard(parent, label, value, sub) {
-    const card = parent.addStack()
-    card.layoutVertically()
-    card.backgroundColor = BG_CARD
-    card.cornerRadius = 8
-    card.setPadding(6, 8, 6, 8)
-    const lbl = card.addText(label)
+  weekRow.addSpacer()
+
+  const weekVal = weekRow.addText(fmtMins(s.week_minutes))
+  weekVal.font = new Font("Courier New", 11)
+  weekVal.textColor = GOLD
+
+  w.addSpacer(8)
+
+  // ── 分隔线 ──
+  const div = w.addText("─────────────────────────────")
+  div.font = new Font("Courier New", 8)
+  div.textColor = DIM
+
+  w.addSpacer(6)
+
+  // ── 底部数据 ──
+  const statsRow = w.addStack()
+  statsRow.layoutHorizontally()
+
+  function statItem(parent, label, value) {
+    const col = parent.addStack()
+    col.layoutVertically()
+    const lbl = col.addText(label)
+    lbl.font = new Font("Courier New", 8)
     lbl.textColor = DIM
-    lbl.font = Font.mediumSystemFont(8)
-    card.addSpacer(2)
-    const val = card.addText(value)
-    val.textColor = HI
-    val.font = Font.boldSystemFont(15)
-    const subTxt = card.addText(sub)
-    subTxt.textColor = MID
-    subTxt.font = Font.systemFont(9)
+    const val = col.addText(value)
+    val.font = new Font("Courier New", 11)
+    val.textColor = WHITE
   }
 
-  addCard(row, "TODAY", fmtMins(s.today_minutes), `${s.today_sessions} sessions`)
-  row.addSpacer(8)
-  addCard(row, "THIS WEEK", fmtMins(s.week_minutes), `${s.week_sessions} sessions`)
-  row.addSpacer(8)
-  addCard(row, "TOTAL", fmtMins(s.total_minutes), `${s.total_sessions} sessions`)
+  statItem(statsRow, "sessions", `${s.today_sessions}`)
+  statsRow.addSpacer()
+  statItem(statsRow, "this week", `${s.week_sessions}`)
+  statsRow.addSpacer()
+  statItem(statsRow, "total", fmtMins(s.total_minutes))
 
   w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
   return w
