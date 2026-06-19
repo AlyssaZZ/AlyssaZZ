@@ -41,19 +41,19 @@ function level(totalMins) {
 async function buildWidget(data) {
   const w = new ListWidget()
   w.backgroundColor = BG
-  w.setPadding(12, 16, 12, 16)
+  w.setPadding(14, 18, 14, 18)
 
   if (!data) {
     const t = w.addText("NO SIGNAL")
     t.textColor = AMBER
-    t.font = new Font("Courier New", 12)
+    t.font = new Font("Courier New", 14)
     return w
   }
 
   const s = data.stats
   const goal = s.monthly_goal_minutes || 600
-  const todayGoal = Math.round(goal / 30)   // ~20m/day
-  const weekGoal  = Math.round(goal / 4)    // ~150m/week
+  const todayGoal = Math.round(goal / 30)
+  const weekGoal  = Math.round(goal / 4)
   const todayPct  = Math.min(s.today_minutes / todayGoal, 1)
   const weekPct   = Math.min(s.week_minutes  / weekGoal,  1)
   const lv        = level(s.total_minutes)
@@ -64,97 +64,82 @@ async function buildWidget(data) {
   r1.layoutHorizontally()
   r1.centerAlignContent()
 
-  // 像素小人列
   const spriteCol = r1.addStack()
   spriteCol.layoutVertically()
   spriteCol.centerAlignContent()
-
   const lines = [" {-□-} ", "(  oo )", " ╰──╯  "]
   for (const l of lines) {
     const t = spriteCol.addText(l)
-    t.font = new Font("Courier New", 10)
+    t.font = new Font("Courier New", 13)
     t.textColor = AMBER
   }
 
-  r1.addSpacer(10)
+  r1.addSpacer(12)
 
-  // 名字 + lv
   const nameCol = r1.addStack()
   nameCol.layoutVertically()
-
   const nameRow = nameCol.addStack()
   nameRow.layoutHorizontally()
   nameRow.centerAlignContent()
   const nameTxt = nameRow.addText("Claude")
-  nameTxt.font = new Font("Courier New", 13)
+  nameTxt.font = new Font("Courier New", 16)
   nameTxt.textColor = WHITE
-  nameRow.addSpacer(6)
+  nameRow.addSpacer(8)
   const lvBadge = nameRow.addStack()
   lvBadge.backgroundColor = new Color("#ff6b35")
   lvBadge.cornerRadius = 4
-  lvBadge.setPadding(1, 5, 1, 5)
+  lvBadge.setPadding(2, 6, 2, 6)
   const lvTxt = lvBadge.addText(`Lv ${lv}`)
-  lvTxt.font = new Font("Courier New", 9)
+  lvTxt.font = new Font("Courier New", 11)
   lvTxt.textColor = WHITE
-
-  nameCol.addSpacer(4)
-
+  nameCol.addSpacer(5)
   const refTxt = nameCol.addText("⟳ " + refreshStr)
-  refTxt.font = new Font("Courier New", 9)
+  refTxt.font = new Font("Courier New", 11)
   refTxt.textColor = DIM
-
   r1.addSpacer()
 
-  w.addSpacer(10)
+  w.addSpacer(12)
 
   // ── 今日进度（心心）──
   const todayRow = w.addStack()
   todayRow.layoutHorizontally()
   todayRow.centerAlignContent()
-
   const todayLbl = todayRow.addText("today  ")
-  todayLbl.font = new Font("Courier New", 11)
+  todayLbl.font = new Font("Courier New", 13)
   todayLbl.textColor = DIM
-
-  const heartsTxt = todayRow.addText(hearts(todayPct, 10))
-  heartsTxt.font = new Font("Courier New", 11)
+  const heartsTxt = todayRow.addText(hearts(todayPct, 8))
+  heartsTxt.font = new Font("Courier New", 13)
   heartsTxt.textColor = PINK
-
   todayRow.addSpacer()
-
   const todayVal = todayRow.addText(fmtMins(s.today_minutes))
-  todayVal.font = new Font("Courier New", 11)
+  todayVal.font = new Font("Courier New", 13)
   todayVal.textColor = GOLD
 
-  w.addSpacer(6)
+  w.addSpacer(8)
 
   // ── 本周进度（方块）──
   const weekRow = w.addStack()
   weekRow.layoutHorizontally()
   weekRow.centerAlignContent()
-
   const weekLbl = weekRow.addText("week   ")
-  weekLbl.font = new Font("Courier New", 11)
+  weekLbl.font = new Font("Courier New", 13)
   weekLbl.textColor = DIM
-
-  const blocksTxt = weekRow.addText(blocks(weekPct, 10))
-  blocksTxt.font = new Font("Courier New", 11)
+  const blocksTxt = weekRow.addText(blocks(weekPct, 8))
+  blocksTxt.font = new Font("Courier New", 13)
   blocksTxt.textColor = GREEN
-
   weekRow.addSpacer()
-
   const weekVal = weekRow.addText(fmtMins(s.week_minutes))
-  weekVal.font = new Font("Courier New", 11)
+  weekVal.font = new Font("Courier New", 13)
   weekVal.textColor = GOLD
 
-  w.addSpacer(8)
+  w.addSpacer(10)
 
   // ── 分隔线 ──
-  const div = w.addText("─────────────────────────────")
-  div.font = new Font("Courier New", 8)
+  const div = w.addText("───────────────────────────")
+  div.font = new Font("Courier New", 9)
   div.textColor = DIM
 
-  w.addSpacer(6)
+  w.addSpacer(8)
 
   // ── 底部数据 ──
   const statsRow = w.addStack()
@@ -164,10 +149,10 @@ async function buildWidget(data) {
     const col = parent.addStack()
     col.layoutVertically()
     const lbl = col.addText(label)
-    lbl.font = new Font("Courier New", 8)
+    lbl.font = new Font("Courier New", 9)
     lbl.textColor = DIM
     const val = col.addText(value)
-    val.font = new Font("Courier New", 11)
+    val.font = new Font("Courier New", 13)
     val.textColor = WHITE
   }
 
