@@ -1,14 +1,13 @@
 const GITHUB_RAW_URL =
   "https://raw.githubusercontent.com/alyssazz/alyssazz/main/usage/sessions.json"
 
-const BG     = new Color("#0f0f1a")
-const GREEN  = new Color("#39ff14")
-const YELLOW = new Color("#ffe600")
-const ORANGE = new Color("#ff8c00")
-const RED    = new Color("#ff3333")
-const WHITE  = new Color("#f0f0f0")
-const DIM    = new Color("#444466")
-const DIMBAR = new Color("#1e1e2e")
+const ACCENT  = new Color("#7C3AED")
+const BG_DARK = new Color("#0D0D0D")
+const BG_CARD = new Color("#1A1A2E")
+const DIM     = new Color("#888888")
+const MID     = new Color("#CCCCCC")
+const HI      = Color.white()
+const GREEN   = new Color("#22C55E")
 
 async function fetchData() {
   const req = new Request(GITHUB_RAW_URL)
@@ -19,123 +18,120 @@ async function fetchData() {
 function fmtMins(m) {
   if (m < 60) return `${m}m`
   const h = Math.floor(m / 60), r = m % 60
-  return r === 0 ? `${h}h` : `${h}h${r}m`
-}
-
-function barColor(pct) {
-  if (pct >= 0.8) return GREEN
-  if (pct >= 0.5) return YELLOW
-  if (pct >= 0.3) return ORANGE
-  return RED
-}
-
-function pixelBar(pct, total) {
-  const filled = Math.max(1, Math.round(pct * total))
-  return "█".repeat(filled) + "░".repeat(total - filled)
+  return r === 0 ? `${h}h` : `${h}h ${r}m`
 }
 
 async function buildWidget(data) {
   const w = new ListWidget()
-  w.backgroundColor = BG
+  w.backgroundColor = BG_DARK
   w.setPadding(14, 16, 14, 16)
 
   if (!data) {
-    const t = w.addText("NO DATA")
-    t.textColor = RED
-    t.font = new Font("Menlo", 14)
+    const t = w.addText("⚠️ No data")
+    t.textColor = HI
+    t.font = Font.systemFont(12)
     return w
   }
 
   const s = data.stats
   const goal = s.monthly_goal_minutes || 600
-  const weekGoal = Math.round(goal / 4)
-  const todayGoal = Math.round(goal / 30)
-  const weekPct  = Math.min(s.week_minutes / weekGoal, 1)
-  const todayPct = Math.min(s.today_minutes / todayGoal, 1)
+  const monthPct = Math.min(s.month_minutes / goal, 1)
   const refreshStr = new Date().toLocaleTimeString("zh-CN", {hour:"2-digit", minute:"2-digit"})
 
-  // ── ROW 1: icon + title + refresh time ──
+  // ── Row 1: 像素小人 + 标题 + 刷新时间 ──
   const r1 = w.addStack()
   r1.layoutHorizontally()
   r1.centerAlignContent()
 
-  const ico = r1.addText("👾")
-  ico.font = Font.systemFont(20)
+  const sprite = r1.addText("👾")
+  sprite.font = Font.systemFont(18)
 
-  r1.addSpacer(8)
+  r1.addSpacer(6)
 
-  const titleTxt = r1.addText("CLAUDE.EXE")
-  titleTxt.font = new Font("Menlo", 13)
-  titleTxt.textColor = GREEN
+  const titleTxt = r1.addText("Claude Code")
+  titleTxt.font = Font.boldSystemFont(14)
+  titleTxt.textColor = HI
 
   r1.addSpacer()
 
   const refreshTxt = r1.addText("⟳ " + refreshStr)
-  refreshTxt.font = new Font("Menlo", 11)
+  refreshTxt.font = Font.systemFont(11)
   refreshTxt.textColor = DIM
 
   w.addSpacer(10)
 
-  // ── ROW 2: TODAY label + big number ──
-  const r2 = w.addStack()
-  r2.layoutHorizontally()
-  r2.bottomAlignContent()
+  // ── Row 2: THIS MONTH 标签 + 进度数字 ──
+  const mLabel = w.addText("THIS MONTH")
+  mLabel.textColor = DIM
+  mLabel.font = Font.mediumSystemFont(9)
 
-  const todayLbl = r2.addText("TODAY  ")
-  todayLbl.font = new Font("Menlo", 11)
-  todayLbl.textColor = DIM
+  w.addSpacer(3)
 
-  const todayVal = r2.addText(fmtMins(s.today_minutes))
-  todayVal.font = new Font("Menlo", 28)
-  todayVal.textColor = barColor(todayPct)
+  const mRow = w.addStack()
+  mRow.layoutHorizontally()
+  mRow.bottomAlignContent()
 
-  r2.addSpacer()
+  const mVal = mRow.addText(fmtMins(s.month_minutes))
+  mVal.textColor = HI
+  mVal.font = Font.boldSystemFont(22)
 
-  const todayGoalTxt = r2.addText("/ " + fmtMins(todayGoal))
-  todayGoalTxt.font = new Font("Menlo", 11)
-  todayGoalTxt.textColor = DIM
+  mRow.addSpacer(4)
 
-  w.addSpacer(5)
+  const mGoal = mRow.addText(`/ ${fmtMins(goal)}`)
+  mGoal.textColor = DIM
+  mGoal.font = Font.systemFont(12)
 
-  // ── ROW 3: TODAY bar ──
-  const todayBarTxt = w.addText(pixelBar(todayPct, 28))
-  todayBarTxt.font = new Font("Menlo", 11)
-  todayBarTxt.textColor = barColor(todayPct)
+  mRow.addSpacer()
+
+  const badge = mRow.addStack()
+  badge.backgroundColor = monthPct >= 1 ? GREEN : ACCENT
+  badge.cornerRadius = 6
+  badge.setPadding(2, 7, 2, 7)
+  const badgeTxt = badge.addText(monthPct >= 1 ? "✓" : `${Math.round(monthPct * 100)}%`)
+  badgeTxt.textColor = HI
+  badgeTxt.font = Font.boldSystemFont(10)
+
+  w.addSpacer(6)
+
+  // ── 进度条（永远是紫色）──
+  const barBg = w.addStack()
+  barBg.backgroundColor = new Color("#2A2A3E")
+  barBg.cornerRadius = 4
+  const barFill = barBg.addStack()
+  barFill.backgroundColor = monthPct >= 1 ? GREEN : ACCENT
+  barFill.cornerRadius = 4
+  barFill.size = new Size(Math.max(8, Math.round(270 * monthPct)), 8)
+  barBg.addSpacer()
 
   w.addSpacer(10)
 
-  // ── DIVIDER ──
-  const div = w.addText("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
-  div.font = new Font("Menlo", 7)
-  div.textColor = DIM
+  // ── Row 3: TODAY / WEEK / TOTAL 卡片 ──
+  const row = w.addStack()
+  row.layoutHorizontally()
 
-  w.addSpacer(8)
+  function addCard(parent, label, value, sub) {
+    const card = parent.addStack()
+    card.layoutVertically()
+    card.backgroundColor = BG_CARD
+    card.cornerRadius = 8
+    card.setPadding(6, 8, 6, 8)
+    const lbl = card.addText(label)
+    lbl.textColor = DIM
+    lbl.font = Font.mediumSystemFont(8)
+    card.addSpacer(2)
+    const val = card.addText(value)
+    val.textColor = HI
+    val.font = Font.boldSystemFont(15)
+    const subTxt = card.addText(sub)
+    subTxt.textColor = MID
+    subTxt.font = Font.systemFont(9)
+  }
 
-  // ── ROW 4: WEEK label + numbers ──
-  const r4 = w.addStack()
-  r4.layoutHorizontally()
-  r4.centerAlignContent()
-
-  const weekLbl = r4.addText("WEEK  ")
-  weekLbl.font = new Font("Menlo", 11)
-  weekLbl.textColor = DIM
-
-  const weekVal = r4.addText(fmtMins(s.week_minutes))
-  weekVal.font = new Font("Menlo", 16)
-  weekVal.textColor = barColor(weekPct)
-
-  r4.addSpacer()
-
-  const weekGoalTxt = r4.addText(Math.round(weekPct * 100) + "%  / " + fmtMins(weekGoal))
-  weekGoalTxt.font = new Font("Menlo", 11)
-  weekGoalTxt.textColor = DIM
-
-  w.addSpacer(4)
-
-  // ── ROW 5: WEEK bar ──
-  const weekBarTxt = w.addText(pixelBar(weekPct, 28))
-  weekBarTxt.font = new Font("Menlo", 11)
-  weekBarTxt.textColor = barColor(weekPct)
+  addCard(row, "TODAY", fmtMins(s.today_minutes), `${s.today_sessions} sessions`)
+  row.addSpacer(8)
+  addCard(row, "THIS WEEK", fmtMins(s.week_minutes), `${s.week_sessions} sessions`)
+  row.addSpacer(8)
+  addCard(row, "TOTAL", fmtMins(s.total_minutes), `${s.total_sessions} sessions`)
 
   w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
   return w
